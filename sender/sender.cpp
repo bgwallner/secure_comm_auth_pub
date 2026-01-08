@@ -132,11 +132,30 @@ int send_public_key(mqd_t mq, const Botan::RSA_PublicKey& public_key)
     // Get X.509 SubjectPublicKeyInfo DER
     std::vector<uint8_t> der = public_key.subject_public_key();
 
+    // Add signature to the message using sender's private key (PEM format)
+    Botan::DataSource_Memory key_source(kSenderPrivateKeyPem);
+    Botan::AutoSeeded_RNG rng;
+    std::unique_ptr<Botan::Private_Key> private_key = Botan::PKCS8::load_key(key_source);
+    Botan::PK_Signer signer(*private_key, rng, "PSS(SHA-256)");
+    std::vector<uint8_t> signature = signer.sign_message(der, rng);
+
+    std::cout << "[Sender] Generated signature for public key\n";
+    print_vector_hex(signature);
+
+    // Append signature to the DER data
+    der.insert(der.end(), signature.begin(), signature.end());
+
+    // Add length of signature to last element (cannot get this from Botan during verification)
+    const size_t signature_size = signature.size();
+    der.push_back(static_cast<uint8_t>(signature_size));
+
+    // Ensure the message fits in the queue
     if (der.size() > kMessageSize) {
-        std::cerr << "[Sender] Public key too large for message queue\n";
+        std::cerr << "[Sender] Public key + signature too large for message queue\n";
         return kNOT_OK;
     }
 
+    // Send the public key + signature via message queue
     if (mq_send(mq,
                 reinterpret_cast<const char*>(der.data()),
                 der.size(),
@@ -148,7 +167,8 @@ int send_public_key(mqd_t mq, const Botan::RSA_PublicKey& public_key)
         return kNOT_OK;
     }
 
-    std::cout << "[Sender] Public key sent (" << der.size() << " bytes)\n";
+    std::cout << "[Sender] Public key + signature sent (" << der.size() << " bytes)\n";
+
     return kOK;
 }
 

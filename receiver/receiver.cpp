@@ -107,14 +107,14 @@ void print_botan_secure_hex(const Botan::secure_vector<uint8_t>& vec) {
 
 int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
 {
-    std::array<std::byte, kMessageSize> pub_key_buffer{};
-    unsigned int msg_prio;
+    //std::array<std::byte, kMessageSize> pub_key_buffer{};
+    std::vector<uint8_t> pub_key_buffer(kMessageSize);
 
     const ssize_t received_bytes =
         mq_receive(mq,
                    reinterpret_cast<char*>(pub_key_buffer.data()),
                    pub_key_buffer.size(),
-                   &msg_prio);
+                   nullptr);
 
     if (received_bytes == -1) {
         perror("mq_receive");
@@ -123,12 +123,39 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
 
     std::cout << "[Receiver] Received public key (" << received_bytes << " bytes)\n";
     std::cout << "[Receiver] The received public key raw data \n";
-    print_buffer_hex(pub_key_buffer, received_bytes);
+    print_vector_hex(pub_key_buffer);
     std::cout << "\n";
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+
+    // Verify the signature using pre-shared sender's public key (kSenderPublicKeyPem)
+    Botan::DataSource_Memory sender_key_source(kSenderPublicKeyPem);
+    std::unique_ptr<Botan::Public_Key> sender_public_key = Botan::X509::load_key(sender_key_source);
+    Botan::PK_Verifier verifier(*sender_public_key, "PSS(SHA-256)");
+    
+    // Separate the DER data and signature. Last byte contains the signature size
+    const size_t signature_size = static_cast<size_t>(pub_key_buffer[received_bytes - 1]);
+
+    if (static_cast<size_t>(received_bytes) < signature_size) {
+        std::cerr << "[Receiver] Received data is smaller than signature size\n";
+        return kNOT_OK;
+    }
+
+    const size_t der_size = received_bytes - signature_size - 1;
+    std::vector<uint8_t> der_data(der_size);
+    std::vector<uint8_t> signature_data(signature_size);
+    std::memcpy(der_data.data(), pub_key_buffer.data(), der_size);
+    std::memcpy(signature_data.data(), pub_key_buffer.data() + der_size, signature_size);
+    if (!verifier.verify_message(der_data.data(), der_size, signature_data.data(), signature_size)) {
+        std::cerr << "[Receiver] Public key signature verification failed!\n";
+        return kNOT_OK;
+    }
+    std::cout << "[Receiver] Public key signature verification succeeded\n";
+    
+    // Load the public key from DER data
     Botan::DataSource_Memory ds(
-        reinterpret_cast<const uint8_t*>(pub_key_buffer.data()),
-        received_bytes
+        reinterpret_cast<const uint8_t*>(der_data.data()),
+        der_size
     );
 
     public_key = Botan::X509::load_key(ds);
