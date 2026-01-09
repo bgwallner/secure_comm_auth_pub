@@ -38,45 +38,44 @@ nmUCLcC2vdcAuUyKPxJ+y3lk4F6O3gJoeyymWpDV6l90XNXSK+VitUrI+iFBqG8K
 
 // Private key for signing messages (PEM format)
 const std::string kSenderPrivateKeyPem = R"(-----BEGIN PRIVATE KEY-----
-MIIG/gIBADANBgkqhkiG9w0BAQEFAASCBugwggbkAgEAAoIBgQDJ6HrMXEnpNkus
-WPhVZPmdrmVFte/owUpf/zeFiBLE1RCJ0eUlehyQn7HH8Mv8Cu0kt564vysHA0by
-FaTJek61Crt6GdvVxw1w+6MPAYsmqENUkY/4ShsABbA1Lojq1uxQSaCkna6aW2BU
-DQjfkIF6iBbXPk1YumPtm828xys/NHcYRZYQrzsN0+UOnnMHC3FnowCCLs5oTUqj
-qKhTs6gv31ssT00t1k1IxsuOOX8n3n3skEiTlW787UjqjIu0bqWgT4Rz4B02KbNP
-/W/kn/7an3EilT44Jg/oTvDVBb/AAD2FYNKKDkuug+7QSgxo9kakABzdQHfNfgKL
-gpb/ARdVi0tBvWuWzq8S5DmVEXZVKvxjHNlChqszbz+l3sYXidkXTSzgRpJeUWaC
-lZ1osatn9gwBdioMfYnD8dvuQDynImIfRKYfyawPX6qq9busdq50uHecZGgt1aq2
-nk2zh10OfdEXqfeujWnisgNWfMdl/aPnlf40TC9DEhaZ++PJYa8CAwEAAQKCAYBk
-31bqXnk2oD+yPUjkMOxckNJbv4e6e0cTKsisV804tVHr6QdYb+dxgbcqMu1WYIcV
-vv73QdrXSBXbwGBxoD9OR6xeVij0ZtwaRD20s4q3p3zr9UU+QJe4rR7ZkwQof3PU
-sNQnKfgfeeNoWpLCTsnBU9hFdQTjfUuLXDmvRLoge6+8Wpecgk84m1JmuVaygE8J
-/e+1GnlYtrTBivN9zdYLBMXiH0Rp0BUQdPEhfyw92PSEiZkY0qF+j3XMaKcrX9NP
-ELv2G6NpYqR5X6cQ9OrOc48TkDsNJhfCNX83Lph1wtvNgiSdOgZIyDMLrqZLUjv6
-ATAAzt712880aBruYCe1S8/dTItx2127sOk23vljzIKHT9UJ354sRjMWp663EEct
-h46i3DNzp7KI2r4EwCAgD8v3q1Z5xibC62BjA++9MDHH+PY+t9XCtheZ+Oaek7CB
-S8CgI/OkAMlCLEgWIoU5wWYyagsTomZPBtI8exVKbh49SZkCRk32zZtkHBt60kEC
-gcEA/LjPDoEO6f97Rb2RkLG7MY7HmKq2wcWC6ORDYcCzeURdm/UcQW1XZoorObiI
-MPPRsz52TP0rGZ/1JbBsxpJK1HhxKSXIcIIYeZe2vf3IGYBhjWn187t3FDgNWHlx
-zweAgrBm8PLYOz5C/xQnmqkDvxZ0LII37elN4zCp635bkWnUb5TLOc34O5QXs8z/
-i0N0Z/kM9qvzWcoBWA1Rs/f8wBUwQCl/kQvM60ojYXFawXl7KmMqgrlf32mNcpuX
-+8B/AoHBAMyG8COegCU+NGF5VR7Xg4NMQpbChhtXxWZFDvW37FOH1ja3hW/3qt9z
-kKx2kssHQ1IzHZhzNuX6sRajdg7gL15AvRh6y83A+w+XQDX6lJzqjyuvofIbEEAl
-I+jDWKPm7IcMjE7JcWyXxhNsI7pgX7njNIHYdD7JhaGYFwx/Ngi6DA0FU9MvuW/X
-kMaV3RzxvpWyuDmxW9MOm3HR0KXr9GPvwGJILbMJCJZp6dhy+iI64IO3egueeUfz
-xAvnuCHG0QKBwQDf+1tn23JAabHzqYOt3heuYID+Ca9YJZlUl5owtP1b6P+eDasx
-QZtIwgR1b9skp7OfTSjEK01btK0s7iQ6CcZQcT653Ua8kFDo01GfKaGDGIldMCBQ
-GEH9pYAOffQkLN309isGOfTy7MesE0zWgh1T6q6kE/VF4pSpWqP+l0rIoicpjZJg
-dPAgvawUKwgBgZNV4yFeLh/L4IE4bPWQr6VPCHhvJVhuUSsZDeg1oKVy/BvxAVrX
-6TvTYlV+0e/trDkCgcEAq2P8gmzFR/Bbpr8tZH4HGBTkzD9QcENaCTyfr6uj38+5
-4/pgWJa72yqVtuBaXMbGVHC/QUxzWb99fNIYEZkuOJaZn5TviolIGiWOSm2k8eXh
-eiNg22hwcsBs2hYxBpBx7y3FuhQ292AsPYRmYD14mmZaTuEbcK4hTGwODIvhtOhr
-RtILD7MzexSynqdhNmsiYYH1vWrx3uijvHqtlQ0orEJx/iosGZbdWmaA7sBS+jJK
-iDZNkMUJLxGIXM2eULexAoHAEnaSwMu0dx8HlQoadAw9cKvsDK8CnX/b8hTlPLh8
-CaF3dMWvNZfrAjpEobKLuS3SiQp+cOG6HcZLbNIEf0Pifamb0zuIN57ee7hChMxG
-eTXdQ1dTZHRNdPdiI0QN++208xizfTncCDbAJ4kGwwuOnJvIPamzR5zT12ICBJTI
-+siYVyXhH88L/m4NB1sI/yEnJnmxwvFMlysm7ndNyeAy4+Bc/fPugnuUSCKfraoQ
-9E+0Lpd3ro5QhtREpUhGPLY9
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC+MZnAUHRoeB32
+TFnPJ2O4VAR2oCFvY1e/HQ8Aq8Iyx77PB3ZInxUcy/ZPOKayj78ZCaQJJx3LTA8b
+fwkdbmwVWcZ0VMpiLs4AFEPan0QTfd5tUldi82MFcXqi1NbqOppBufaYUcpZcNRK
+MFzPnPZtnXcO1pVOnR7pUHaPnxQ9tXw4kgPVl3O9o5CLubwliumPtdn7UBvmiwHf
+fzg9ZYaGPOnham8Z2KKv4qI/OJEQE9PFg899PgFJD+zR7vGa31CbbZoeYB1jW4dq
+rCyRaXOxtPeA0AcKyrxRTLrOn5caHpwbx4jiNNfx5XaPsM/3ZF5L4DrWucyXCbDw
+bABXrm1rAgMBAAECggEAU8dcj0rBZE1ZAWfzfZ0/v2//AVQbNko/2jcOJ0EBi8XS
+BrcmQuoUbjloF9CAGZLZXkmRYNjCto0b8IQ+eyDramI/2XmKJsKwSneixhg28BEX
+W/eT98n3Wev5VeXEf6vtzDsC5WjN5iUd1kpEb82X/YQJ8FbUsSrj9WlUuIId8+oN
+1oXluEsi7NHjHRkdGD7SkN5PUWOxTGeERvCrKqjeKSp/1f2nEPltFq8Os17foJHJ
+lDqU8m6RLtCw17vLsWXV0JujSA0eaWfGrVnCjQ31pzxAPkTAlNP4UVJ0vKVnvaeR
+7yJ/cCebsuyf7vM3H0wxr6cN4LcKHfNOGxxBhA0HVQKBgQDdA9gcwGJYM35dIoLH
+K8NqyawFW7i4EeHl6H+pQc7JKdOL8tUvzAxAWTTDq2YNtkdmcZ9dcSTyKRwr6QcU
+L8JfVQih2Q99s+tBdp3bIMdyBVxgnRhwU3DYv4RSRkR3sTqg6zeoQYv1MppOsNrr
+fdGKhS4YvRiLBF9c9E8A/kMZRwKBgQDcTMqSbLq9KPlBzbYek2a7Qlbj20Rhm8Q1
+Jlbo6aGYcIpB77j9CcTmLxwaA7TnTf3odht6PI5Ldlxw4OtGdc6vzNOCBFrScuRb
+Pmm4KWgWz/SeVXgGlA1qjEzUo5i4K5kXhT7jIH9ZqyXC8gUJmGrY0H4cKSY3igGy
+kcoj3BccvQKBgQDU4YAG6ZOQa0D6ymP3HgMjV89WdetteOQChDh6ukVIY/48nZCU
+clEWphX5pp0s9fa+CRE8et/gVJKrBNBptDrfglNHOYD/Tg56xprz1xXkkJ9S+93v
+S5+1VntImCAYvd+/4fCBI2mAqtYQl662B0GO0Ar/jxwVwwdrzHJQfZf5vwKBgQDU
+n1Ugj8qICYTRaw8sYY3UjIm6b4WHQ8TSm4dkUyHBNFVsoEeGCai9lZhkz1EJsi+u
+7ldE2i9oS/uagqrxnYB4EpPNOBDEb1lRa2Kz+VraManiK5Gln713KaR50s/yaTng
+Bp2Ur2fajqHqjpYoFbCCRHCDE4AsOIm85JMZmzG/bQKBgDkObXyEBPIdzNIy2clr
+csVO5YRYAlpc1DgLAVaB+2j0vwD7cerU2Y5tNxtTSVGZbABUQmKmzIecWKsE2AKI
+5JQgMeeHc5tuz3RbBfZcXokd+xFxtbwKOck6M+d6JtWLUdkYt4axzu21y6B8oZ8+
+EPMxH8hoznzjgYsWN0s24LPo
 -----END PRIVATE KEY-----)";
+
+const std::string kSenderPublicKeyPem = R"(-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhkaHXuDKr8N2glMxtTRU
+YqCdR6cjFgtbr2kipmrDscBtd/vKzRgfQWQlr55aAdeVGd0QPEdSBubXRqNjYeg1
+vfHWMj0lq9ZRpPrhk5gO/F4TKxT/AFG3rP3wvS138sbctK4YoyRb+yeg5Mw3dsgi
+NeP+L6KbDDchA+Cdx8MkofxWKzW74GdR8LlMZYPFFKVu2naMwR7S+u40KUwveOGt
+bYkNBE/XrDjyV1Sbx0mBPLcAuXpes9KosvYY+wTXJaG4gb1qYa8dxmf1nnsod67Z
+mwEOu8RIOjF9pY2P/hqee8DccNSYtAEap8FpeZZmDaMzarkQHw/dld9IzMjD0yMl
+tQIDAQAB
+-----END PUBLIC KEY-----)";
+
 
 // Automatically unlinks the message queue when destroyed.
 class MqUnlinker {
@@ -139,19 +138,22 @@ int send_public_key(mqd_t mq, const Botan::RSA_PublicKey& public_key)
     Botan::PK_Signer signer(*private_key, rng, "PSS(SHA-256)");
     std::vector<uint8_t> signature = signer.sign_message(der, rng);
 
-    std::cout << "[Sender] Generated signature for public key\n";
+    std::cout << "[Sender] Public key DER data (" << der.size() << " bytes)\n";
+    print_vector_hex(der);
+    std::cout << "[Sender] Generated signature for public key (" << signature.size() << " bytes)\n";
     print_vector_hex(signature);
 
     // Append signature to the DER data
     der.insert(der.end(), signature.begin(), signature.end());
 
-    // Add length of signature to last element (cannot get this from Botan during verification)
+    // Add length of signature to last two elements MSB (cannot get this from Botan during verification)
     const size_t signature_size = signature.size();
-    der.push_back(static_cast<uint8_t>(signature_size));
+    der.push_back(static_cast<uint8_t>(signature_size >> 8));
+    der.push_back(static_cast<uint8_t>(signature_size & 0xFF));
 
     // Ensure the message fits in the queue
     if (der.size() > kMessageSize) {
-        std::cerr << "[Sender] Public key + signature too large for message queue\n";
+        std::cerr << "[Sender] Public key + signature + signature size too large for message queue\n";
         return kNOT_OK;
     }
 
@@ -167,7 +169,7 @@ int send_public_key(mqd_t mq, const Botan::RSA_PublicKey& public_key)
         return kNOT_OK;
     }
 
-    std::cout << "[Sender] Public key + signature sent (" << der.size() << " bytes)\n";
+    std::cout << "[Sender] Public key + signature sent + signature size (" << der.size() << " bytes)\n";
 
     return kOK;
 }

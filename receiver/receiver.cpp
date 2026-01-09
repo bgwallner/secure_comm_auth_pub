@@ -15,63 +15,50 @@
 #include <botan/pubkey.h>
 #include <botan/rsa.h>
 #include <botan/x509_key.h>
+#include <botan/pem.h>
 
 // Project headers
 #include "common.hpp"
 
 // Private key for signing (PEM format)
 const std::string kReceiverPrivateKeyPem = R"(-----BEGIN PRIVATE KEY-----
-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
-mUscM89dY2PHH6oNj/pvHUc=
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCGRode4Mqvw3aC
+UzG1NFRioJ1HpyMWC1uvaSKmasOxwG13+8rNGB9BZCWvnloB15UZ3RA8R1IG5tdG
+o2Nh6DW98dYyPSWr1lGk+uGTmA78XhMrFP8AUbes/fC9LXfyxty0rhijJFv7J6Dk
+zDd2yCI14/4vopsMNyED4J3HwySh/FYrNbvgZ1HwuUxlg8UUpW7adozBHtL67jQp
+TC944a1tiQ0ET9esOPJXVJvHSYE8twC5el6z0qiy9hj7BNclobiBvWphrx3GZ/We
+eyh3rtmbAQ67xEg6MX2ljY/+Gp57wNxw1Ji0ARqnwWl5lmYNozNquRAfD92V30jM
+yMPTIyW1AgMBAAECggEAFKubT70BnrSTlATsGEXFvsgUZjEhytU1SEfCRIWXeg/S
+GkAZ7GAsAZRB4+rX1sRB6PEZvHnLNBJJrg9db3dAfKzTqTi2CaGswF25p4+nMOzn
+fQCWr80knh4advjep/I6jBrn4odonH1xfH8+g4vUDmE6YklhHmyHKdJkX5nYFBJr
+9p/fDj2ctQJNL37G7rOTFieBBoWdG3w9Hotc8HNX3nY+iyOtzHcGZkw8tEdjHcij
+YlUr2KXBSkofxzMtNNzu5GWAFU5OEVqVcUgqNy+TuEZKbM1LwjiwSGXQib1RlUjr
+FGSQYoE2Z6FgUIGOrSHRcEFws89aOYaibZn5hSRHgQKBgQC867L7H7DrWoNpS3ag
+zEdI9zUgK1HZtQ+6YweTwq6soo8kHKuTkhHpEk6ybMI5uM3B4pb4EhJq9B6SWOoN
+pv3CFjaGnso0A0tXFO90udu1q9aHU+BPjtWwRf1QmO0zJxAtBPyBavvri1XbD04D
+ZTx/ubXEDdMLIo3LcjdnsAL/NQKBgQC188CMdxVRBX3QOmLY0Y5yrcHArTSVA7vJ
+IiGuJRe18tFv1Pqs1T7POrEsHuOVNWUgl+gY1/lsxSsylWsbZ04H21mb34HSR7Q2
+qAFj94hGQEbCedtKqUd6F0zHFekByB6+2puYw8ZTnD0SMiGvJtTNJzfWM448ec4e
+gM3C8/PcgQKBgBs9uV8woKgvMwe50+83xYel7ckntfO4gf4UTYFm7x0Bi7ZfU/ZB
+d8et1h8wQ4ljNnggnjhDEtjNPqNHoug5DhowbchXmTyKxRBXenfQXPgDQTneRFf0
+dqemT/KROpLHrTNwpqBattyuCME/obYnoOOh+a29eJMAdoXBgG+5F5WJAoGBAIhK
+7QmKzhHhvitzAMYOuthWJZMxavjQUiLIiVgL+uXU3GMbsyYxmhnaigpVnP4QgA7Z
+Gwc5CGIck04RtKhTSpUCDu5+jp04Dtr+IASEz7Rnw1k7tDMJ+DuRJnbeh6pJABbQ
+Y8sbovzQRMLTgH3V5YNDBEVUWxAb4XTh4L9Ow3WBAoGAOEoy77AHtEAKd9OpxezM
+L6Eek1JVb+mxLA+z5YivDECxg8ZloXhy1b/w17kxXfB+o3iZzDyvPoFWgvhwjegO
+Ng2a3KoH7+WGqYPOyaiogS9SYhcX9TUct/zpiJ5fIl2rb+mwy3kaq0R6McFgmxWl
+CVgBWb9kmCzbuAG5oB0pt98=
 -----END PRIVATE KEY-----)";
 
 // Pre-shared public key for verifying signatures (PEM format)
 const std::string kSenderPublicKeyPem = R"(-----BEGIN PUBLIC KEY-----
-MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAxlKCLeQG/DVoj4+Mx+7n
-acfQQxML1WKJzy2i5h1wWUFt7nIPBIKqjmB7Ex2YU+PYREI2jos7DgCIZQTApx8o
-1yEsKop5eNqdvRKAMIic364pounquC8jTVrhMRIGZ72B8a02qYqm4uK07Fnvy6yu
-2BV5S3KgmCVCSuJnIktnsZ1guLyEE+fOFMexkYNHXDusHiwMq7Cnb02qION9KMID
-77AwU2RIi344L2yU5jH3iJM3XMblamtBqVujewthNoMhsno/MraaBmPHleI02AuU
-DCita8BhTaie3qlOINZAcidzSByXqtpk/YIL2siWyKstaQwwo3UHHTgC893dW5U3
-qwIka6GFsq30Mhdpk2+YwBFsc0vvXY64XTSn8DNuwXJmuMko+7nmEKSx+/CBaQY1
-nmUCLcC2vdcAuUyKPxJ+y3lk4F6O3gJoeyymWpDV6l90XNXSK+VitUrI+iFBqG8K
-1j0wyEKl/4Ly8Ry4axodP6askaA0o8KIGlxbMYv2IkEdAgMBAAE=
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvjGZwFB0aHgd9kxZzydj
+uFQEdqAhb2NXvx0PAKvCMse+zwd2SJ8VHMv2Tzimso+/GQmkCScdy0wPG38JHW5s
+FVnGdFTKYi7OABRD2p9EE33ebVJXYvNjBXF6otTW6jqaQbn2mFHKWXDUSjBcz5z2
+bZ13DtaVTp0e6VB2j58UPbV8OJID1ZdzvaOQi7m8JYrpj7XZ+1Ab5osB3384PWWG
+hjzp4WpvGdiir+KiPziREBPTxYPPfT4BSQ/s0e7xmt9Qm22aHmAdY1uHaqwskWlz
+sbT3gNAHCsq8UUy6zp+XGh6cG8eI4jTX8eV2j7DP92ReS+A61rnMlwmw8GwAV65t
+awIDAQAB
 -----END PUBLIC KEY-----)";
 
 
@@ -107,7 +94,6 @@ void print_botan_secure_hex(const Botan::secure_vector<uint8_t>& vec) {
 
 int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
 {
-    //std::array<std::byte, kMessageSize> pub_key_buffer{};
     std::vector<uint8_t> pub_key_buffer(kMessageSize);
 
     const ssize_t received_bytes =
@@ -121,36 +107,47 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
         return kNOT_OK;
     }
 
-    std::cout << "[Receiver] Received public key (" << received_bytes << " bytes)\n";
-    std::cout << "[Receiver] The received public key raw data \n";
-    print_vector_hex(pub_key_buffer);
-    std::cout << "\n";
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+    std::cout << "[Receiver] Received public key message (" << received_bytes << " bytes)\n";
 
     // Verify the signature using pre-shared sender's public key (kSenderPublicKeyPem)
     Botan::DataSource_Memory sender_key_source(kSenderPublicKeyPem);
     std::unique_ptr<Botan::Public_Key> sender_public_key = Botan::X509::load_key(sender_key_source);
     Botan::PK_Verifier verifier(*sender_public_key, "PSS(SHA-256)");
     
-    // Separate the DER data and signature. Last byte contains the signature size
-    const size_t signature_size = static_cast<size_t>(pub_key_buffer[received_bytes - 1]);
+    // Separate the DER data and signature. Last 2 bytes (MSB) contains the signature size
+    const size_t signature_size = static_cast<size_t>(pub_key_buffer[received_bytes - 2]) << 8 |
+                                   static_cast<size_t>(pub_key_buffer[received_bytes - 1]);
 
     if (static_cast<size_t>(received_bytes) < signature_size) {
         std::cerr << "[Receiver] Received data is smaller than signature size\n";
         return kNOT_OK;
     }
 
-    const size_t der_size = received_bytes - signature_size - 1;
+    const size_t der_size = received_bytes - signature_size - 2;
     std::vector<uint8_t> der_data(der_size);
     std::vector<uint8_t> signature_data(signature_size);
     std::memcpy(der_data.data(), pub_key_buffer.data(), der_size);
     std::memcpy(signature_data.data(), pub_key_buffer.data() + der_size, signature_size);
-    if (!verifier.verify_message(der_data.data(), der_size, signature_data.data(), signature_size)) {
+
+    // Print received public key in hex
+    std::cout << "[Receiver] Received public key (" << der_size << " bytes)\n";
+    std::cout << "[Receiver] The received public key raw data \n";
+    print_vector_hex(der_data);
+    std::cout << "\n";
+
+    // Print received signature in hex
+    std::cout << "[Receiver] Received signature (" << signature_size << " bytes)\n";
+    print_vector_hex(signature_data);
+
+    if (!verifier.verify_message(der_data, signature_data)) {
         std::cerr << "[Receiver] Public key signature verification failed!\n";
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000000));
+
         return kNOT_OK;
     }
     std::cout << "[Receiver] Public key signature verification succeeded\n";
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(40000));
     
     // Load the public key from DER data
     Botan::DataSource_Memory ds(
