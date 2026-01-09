@@ -106,6 +106,28 @@ void print_buffer_hex(const std::array<std::byte, kBufferSize>& buffer) {
     std::cout << std::dec;  // reset to decimal
 }
 
+void print_vector_hex_n(const std::vector<uint8_t>& vec, size_t n = 64) {
+    std::cout << "[Sender] 0x";
+    if (vec.size() <= 2 * n) {
+        for (const auto& byte : vec) {
+            std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+                      << static_cast<unsigned int>(byte);
+        }
+    } else {
+        for (size_t i = 0; i < n; ++i) {
+            std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+                      << static_cast<unsigned int>(vec[i]);
+        }
+        std::cout << " ... ";
+        for (size_t i = vec.size() - n; i < vec.size(); ++i) {
+            std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+                      << static_cast<unsigned int>(vec[i]);
+        }
+    }
+    std::cout << std::dec;  // reset to decimal
+    std::cout << "\n";
+}
+
 void print_vector_hex(const std::vector<uint8_t>& vec) {
     std::cout << "[Sender] 0x";
     for (const auto& byte : vec) {
@@ -138,10 +160,13 @@ int send_public_key(mqd_t mq, const Botan::RSA_PublicKey& public_key)
     Botan::PK_Signer signer(*private_key, rng, "PSS(SHA-256)");
     std::vector<uint8_t> signature = signer.sign_message(der, rng);
 
+    // Print first and last 10 bytes of public key DER
     std::cout << "[Sender] Public key DER data (" << der.size() << " bytes)\n";
-    print_vector_hex(der);
-    std::cout << "[Sender] Generated signature for public key (" << signature.size() << " bytes)\n";
-    print_vector_hex(signature);
+    print_vector_hex_n(der, 10);
+
+    // Print first and last 10 bytes of signature
+    std::cout << "[Sender] Public key signature (" << signature.size() << " bytes)\n";
+    print_vector_hex_n(signature, 10);
 
     // Append signature to the DER data
     der.insert(der.end(), signature.begin(), signature.end());
@@ -169,7 +194,7 @@ int send_public_key(mqd_t mq, const Botan::RSA_PublicKey& public_key)
         return kNOT_OK;
     }
 
-    std::cout << "[Sender] Public key + signature sent + signature size (" << der.size() << " bytes)\n";
+    std::cout << "[Sender] Sent public key + signature + signature size (" << der.size() << " bytes)\n";
 
     return kOK;
 }
@@ -244,7 +269,7 @@ int receive_symmetric_key(mqd_t mq, const Botan::RSA_PrivateKey& private_key,
     std::memcpy(encrypted_data.data(), buffer.data(), bytes_received);
 
     std::cout << "[Sender] Received encrypted symmetric key (" << bytes_received << " bytes)\n";
-    print_vector_hex(encrypted_data);
+    print_vector_hex_n(encrypted_data, 10);
 
     // Copy the encrypted data with 16 bytes less for CMAC
     std::vector<uint8_t> encrypted_key(

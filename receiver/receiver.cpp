@@ -82,6 +82,28 @@ void print_vector_hex(const std::vector<uint8_t>& vec) {
     std::cout << "\n";
 }
 
+void print_vector_hex_n(const std::vector<uint8_t>& vec, size_t n = 64) {
+    std::cout << "[Receiver] 0x";
+    if (vec.size() <= 2 * n) {
+        for (const auto& byte : vec) {
+            std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+                      << static_cast<unsigned int>(byte);
+        }
+    } else {
+        for (size_t i = 0; i < n; ++i) {
+            std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+                      << static_cast<unsigned int>(vec[i]);
+        }
+        std::cout << " ... ";
+        for (size_t i = vec.size() - n; i < vec.size(); ++i) {
+            std::cout << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+                      << static_cast<unsigned int>(vec[i]);
+        }
+    }
+    std::cout << std::dec;  // reset to decimal
+    std::cout << "\n";
+}
+
 void print_botan_secure_hex(const Botan::secure_vector<uint8_t>& vec) {
     std::cout << "[Receiver] 0x";
     for (const auto& byte : vec) {
@@ -107,7 +129,7 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
         return kNOT_OK;
     }
 
-    std::cout << "[Receiver] Received public key message (" << received_bytes << " bytes)\n";
+    std::cout << "[Receiver] Received public key + signature + size (" << received_bytes << " bytes)\n";
 
     // Verify the signature using pre-shared sender's public key (kSenderPublicKeyPem)
     Botan::DataSource_Memory sender_key_source(kSenderPublicKeyPem);
@@ -131,23 +153,19 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
 
     // Print received public key in hex
     std::cout << "[Receiver] Received public key (" << der_size << " bytes)\n";
-    std::cout << "[Receiver] The received public key raw data \n";
-    print_vector_hex(der_data);
+    print_vector_hex_n(der_data, 10);
     std::cout << "\n";
 
     // Print received signature in hex
     std::cout << "[Receiver] Received signature (" << signature_size << " bytes)\n";
-    print_vector_hex(signature_data);
+    print_vector_hex_n(signature_data, 10);
 
     if (!verifier.verify_message(der_data, signature_data)) {
         std::cerr << "[Receiver] Public key signature verification failed!\n";
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000000));
-
         return kNOT_OK;
     }
     std::cout << "[Receiver] Public key signature verification succeeded\n";
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(40000));
+    std::cout << "[Receiver] (This proves authenticity and integrity of the public key!)\n";
     
     // Load the public key from DER data
     Botan::DataSource_Memory ds(
@@ -179,7 +197,7 @@ int send_symmetric_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key,
     // Generate a random symmetric key (e.g., 16 bytes for AES-128)
     rng.randomize(symmetric_key.data(), symmetric_key.size());
     std::cout << "[Receiver] Derived symmetric key\n";
-    print_vector_hex(symmetric_key);
+    print_vector_hex_n(symmetric_key, 10);
     std::cout << "\n";
 
     // Encrypt the symmetric key using the received RSA public key
@@ -187,7 +205,7 @@ int send_symmetric_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key,
     Botan::PK_Encryptor_EME encryptor(*rsa, rng, "EME1(SHA-256)");
     std::vector<uint8_t> encrypted_key = encryptor.encrypt(symmetric_key, rng);
     std::cout << "[Receiver] Encrypted symmetric key with RSA public key\n";
-    print_vector_hex(encrypted_key);
+    print_vector_hex_n(encrypted_key, 10);
     std::cout << "\n";
 
     // Send the encrypted symmetric key via message queue
