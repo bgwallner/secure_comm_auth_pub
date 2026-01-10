@@ -12,6 +12,7 @@
 #include <botan/auto_rng.h>
 #include <botan/data_src.h>
 #include <botan/mac.h>
+#include <botan/pkcs8.h>
 #include <botan/pubkey.h>
 #include <botan/rsa.h>
 #include <botan/x509_key.h>
@@ -130,6 +131,7 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
     }
 
     std::cout << "[Receiver] Received public key + signature + size (" << received_bytes << " bytes)\n";
+    std::cout << "\n";
 
     // Verify the signature using pre-shared sender's public key (kSenderPublicKeyPem)
     Botan::DataSource_Memory sender_key_source(kSenderPublicKeyPem);
@@ -152,20 +154,23 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
     std::memcpy(signature_data.data(), pub_key_buffer.data() + der_size, signature_size);
 
     // Print received public key in hex
-    std::cout << "[Receiver] Received public key (" << der_size << " bytes)\n";
+    std::cout << "[Receiver] Received (to be proved) public key (" << der_size << " bytes)\n";
     print_vector_hex_n(der_data, 10);
     std::cout << "\n";
 
     // Print received signature in hex
     std::cout << "[Receiver] Received signature (" << signature_size << " bytes)\n";
     print_vector_hex_n(signature_data, 10);
+    std::cout << "\n";
 
+    std::cout << "[Receiver] Verifying public key signature...\n";
     if (!verifier.verify_message(der_data, signature_data)) {
-        std::cerr << "[Receiver] Public key signature verification failed!\n";
+        std::cerr << "[Receiver] RESULT: Signature verification failed!\n";
         return kNOT_OK;
     }
-    std::cout << "[Receiver] Public key signature verification succeeded\n";
-    std::cout << "[Receiver] (This proves authenticity and integrity of the public key!)\n";
+    std::cout << "[Receiver] RESULT: Signature verification succeeded\n";
+    std::cout << "[Receiver] (Proves authenticity and integrity of key)\n";
+    std::cout << "\n";
     
     // Load the public key from DER data
     Botan::DataSource_Memory ds(
@@ -183,7 +188,7 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
     }
 
     std::string pem = Botan::X509::PEM_encode(*public_key);
-    std::cout << "[Receiver] Received RSA Public Key in PEM format\n";
+    std::cout << "[Receiver] The received RSA Public Key in PEM format\n";
     std::cout << "\n";
     std::cout << pem << std::endl;
 
@@ -200,13 +205,30 @@ int send_symmetric_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key,
     print_vector_hex_n(symmetric_key, 10);
     std::cout << "\n";
 
-    // Encrypt the symmetric key using the received RSA public key
+    // Encrypt the symmetric key using the received RSA public key (from Sender)
     Botan::RSA_PublicKey* rsa = dynamic_cast<Botan::RSA_PublicKey*>(public_key.get());
     Botan::PK_Encryptor_EME encryptor(*rsa, rng, "EME1(SHA-256)");
     std::vector<uint8_t> encrypted_key = encryptor.encrypt(symmetric_key, rng);
-    std::cout << "[Receiver] Encrypted symmetric key with RSA public key\n";
+    std::cout << "[Receiver] Encrypted symmetric key with RSA public key (" << encrypted_key.size() << " bytes)\n";
     print_vector_hex_n(encrypted_key, 10);
     std::cout << "\n";
+
+    // Add signature of the encrypted symmetric key using Receiver's private key
+    Botan::DataSource_Memory receiver_key_source(kReceiverPrivateKeyPem);
+    std::unique_ptr<Botan::Private_Key> receiver_private_key = Botan::PKCS8::load_key(receiver_key_source);
+    Botan::PK_Signer signer(*receiver_private_key, rng, "PSS(SHA-256)");
+    std::vector<uint8_t> signature = signer.sign_message(encrypted_key, rng);
+    std::cout << "[Receiver] Signature of the encrypted symmetric key (" << signature.size() << " bytes)\n";
+    print_vector_hex_n(signature, 10);
+    std::cout << "\n";
+
+    // Append signature to the encrypted key
+    encrypted_key.insert(encrypted_key.end(), signature.begin(), signature.end());
+
+    // Add length of signature to last two elements MSB
+    const size_t signature_size = signature.size();
+    encrypted_key.push_back(static_cast<uint8_t>(signature_size >> 8));
+    encrypted_key.push_back(static_cast<uint8_t>(signature_size & 0xFF));
 
     // Send the encrypted symmetric key via message queue
     const int send_result = mq_send(
@@ -221,7 +243,7 @@ int send_symmetric_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key,
         return kNOT_OK;
     }
 
-    std::cout << "[Receiver] Sent encrypted symmetric key (" << encrypted_key.size() << " bytes)\n";
+    std::cout << "[Receiver] Sent encrypted symmetric key + signature + signature size (" << encrypted_key.size() << " bytes)\n";
     return kOK;
 }
 

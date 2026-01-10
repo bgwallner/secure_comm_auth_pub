@@ -15,8 +15,8 @@
 // Third-party (Botan) headers (alphabetical)
 #include <botan/auto_rng.h>
 #include <botan/mac.h>
-#include <botan/pubkey.h>
 #include <botan/pkcs8.h>
+#include <botan/pubkey.h>
 #include <botan/rsa.h>
 #include <botan/x509_key.h>
 
@@ -179,6 +179,7 @@ int send_public_key(mqd_t mq, const Botan::RSA_PublicKey& public_key)
     // Ensure the message fits in the queue
     if (der.size() > kMessageSize) {
         std::cerr << "[Sender] Public key + signature + signature size too large for message queue\n";
+        std::cin.get();
         return kNOT_OK;
     }
 
@@ -270,6 +271,10 @@ int receive_symmetric_key(mqd_t mq, const Botan::RSA_PrivateKey& private_key,
 
     std::cout << "[Sender] Received encrypted symmetric key (" << bytes_received << " bytes)\n";
     print_vector_hex_n(encrypted_data, 10);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(40000));
+
+    // TODO: Fix with signature verification
 
     // Copy the encrypted data with 16 bytes less for CMAC
     std::vector<uint8_t> encrypted_key(
