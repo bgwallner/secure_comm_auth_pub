@@ -244,6 +244,7 @@ int send_symmetric_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key,
     }
 
     std::cout << "[Receiver] Sent encrypted symmetric key + signature + signature size (" << encrypted_key.size() << " bytes)\n";
+    std::cout << "\n";
     return kOK;
 }
 

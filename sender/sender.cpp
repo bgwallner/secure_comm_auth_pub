@@ -163,10 +163,12 @@ int send_public_key(mqd_t mq, const Botan::RSA_PublicKey& public_key)
     // Print first and last 10 bytes of public key DER
     std::cout << "[Sender] Public key DER data (" << der.size() << " bytes)\n";
     print_vector_hex_n(der, 10);
+    std::cout << "\n";
 
     // Print first and last 10 bytes of signature
     std::cout << "[Sender] Public key signature (" << signature.size() << " bytes)\n";
     print_vector_hex_n(signature, 10);
+    std::cout << "\n";
 
     // Append signature to the DER data
     der.insert(der.end(), signature.begin(), signature.end());
@@ -271,6 +273,7 @@ int receive_symmetric_key(mqd_t mq, const Botan::RSA_PrivateKey& private_key,
 
     std::cout << "[Sender] Received encrypted symmetric key (" << bytes_received << " bytes)\n";
     print_vector_hex_n(encrypted_data, 10);
+    std::cout << "\n";
 
     std::this_thread::sleep_for(std::chrono::milliseconds(40000));
 
@@ -288,6 +291,7 @@ int receive_symmetric_key(mqd_t mq, const Botan::RSA_PrivateKey& private_key,
 
     std::cout << "[Sender] Decrypted symmetric key (" << symmetric_key_secure.size() << " bytes)\n";
     print_botan_secure_hex(symmetric_key_secure);
+    std::cout << "\n";
 
     // Botan::secure_vector to std::vector
     symmetric_key.assign(symmetric_key_secure.begin(), symmetric_key_secure.end());
@@ -376,6 +380,7 @@ int main() {
           [[fallthrough]];
       case kMessageIdSymKey:
           std::cout << "[Sender] Wait for symmetric key...\n";
+          std::cout << "\n";
           receive_symmetric_key(mq_receiver_to_sender, private_key, symmetric_key);
           message_id = kMessageIdPeriodic;
           [[fallthrough]];
