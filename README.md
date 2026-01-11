@@ -208,6 +208,7 @@ This section analyzes the cryptographic design choices for educational purposes.
 | **Hardcoded Keys** | Pre-shared keys in code | Use secure key management (HSM, cloud KMS) |
 | **No Encryption** | Plaintext periodic messages | Add AES-GCM for confidentiality |
 | **Limited Counter Range** | 8-bit counter (0-255, wraps at 256) | 32-bit or 64-bit sequence numbers for longer sessions |
+| **No Party IDs** | Messages not bound to sender/receiver | Include sender/receiver IDs in CMAC; prevents cross-endpoint message injection |
 | **Static Key Pairs** | Sender's RSA key never changes | Rotate keys regularly (monthly/yearly) |
 | **No Key Derivation** | Symmetric key used directly | Use KDF (HKDF) to derive multiple keys (encryption, authentication) |
 | **No TLS** | Custom protocol | Use TLS 1.3 (mature, audited, standardized) |
@@ -243,6 +244,19 @@ This section analyzes the cryptographic design choices for educational purposes.
    - Receiver validates counter with `check_freshness_counter()` (line 119 in receiver.cpp)
    - Uses delta checking: rejects duplicates (delta == 0) and out-of-order messages (delta > 128)
    - Limitation: Counter wraps at 256, so max 128 messages per session before wrapping; production systems use 32/64-bit sequence numbers
+
+7. ✅ **Missing Party Binding** – ⚠️ *Security Gap*
+   - CMAC authenticates message **contents only**, not sender/receiver identity
+   - **Vulnerability in multi-party scenarios:** In a system with 3+ endpoints, an attacker could:
+     - Capture message from Sender A → Receiver B
+     - Replay it to Receiver C (message still has valid CMAC)
+   - **Mitigation:** Include sender/receiver IDs in CMAC calculation:
+     ```
+     CMAC_input = [sender_id] [receiver_id] [counter] [payload]
+     ```
+   - **Why it matters for production:** Prevents cross-endpoint message injection and provides party binding
+   - **Current code:** Two-party system (fixed Sender ↔ Receiver), so this gap is **low severity** but poor practice
+   - **Exercise for Students:** Modify periodic messages to include 1-byte sender_id (0x01) and receiver_id (0x02), include them in CMAC, and verify on receiver side
 
 **What Production Systems Would Add:**
 
