@@ -148,10 +148,11 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
     }
 
     const size_t der_size = received_bytes - signature_size - 2;
-    std::vector<uint8_t> der_data(der_size);
-    std::vector<uint8_t> signature_data(signature_size);
-    std::memcpy(der_data.data(), pub_key_buffer.data(), der_size);
-    std::memcpy(signature_data.data(), pub_key_buffer.data() + der_size, signature_size);
+    std::vector<uint8_t> der_data;
+    std::vector<uint8_t> signature_data;
+    der_data.assign(pub_key_buffer.begin(), pub_key_buffer.begin() + der_size);
+    signature_data.assign(pub_key_buffer.begin() + der_size,
+                         pub_key_buffer.begin() + der_size + signature_size);
 
     // Print received public key in hex
     std::cout << "[Receiver] Received (to be proved) public key (" << der_size << " bytes)\n";
@@ -289,7 +290,9 @@ int receive_periodic_messages(mqd_t mq, std::vector<uint8_t>& symmetric_key) {
          if (received_cmac != calculated_cmac_vec) {
              std::cerr << "[Receiver] CMAC verification failed!\n";
          }
-         std::cout << "[Receiver] CMAC verification succeeded\n";
+         else {
+            std::cout << "[Receiver] CMAC verification succeeded\n";
+         }
 
         } else {
           perror("mq_receive");

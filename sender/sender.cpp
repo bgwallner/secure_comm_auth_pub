@@ -23,19 +23,6 @@
 // Project headers
 #include "common.hpp"
 
-// Pre-shared public key for verifying signatures (PEM format) from receiver
-const std::string kReceiverPublicKeyPem = R"(-----BEGIN PUBLIC KEY-----
-MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAxlKCLeQG/DVoj4+Mx+7n
-acfQQxML1WKJzy2i5h1wWUFt7nIPBIKqjmB7Ex2YU+PYREI2jos7DgCIZQTApx8o
-1yEsKop5eNqdvRKAMIic364pounquC8jTVrhMRIGZ72B8a02qYqm4uK07Fnvy6yu
-2BV5S3KgmCVCSuJnIktnsZ1guLyEE+fOFMexkYNHXDusHiwMq7Cnb02qION9KMID
-77AwU2RIi344L2yU5jH3iJM3XMblamtBqVujewthNoMhsno/MraaBmPHleI02AuU
-DCita8BhTaie3qlOINZAcidzSByXqtpk/YIL2siWyKstaQwwo3UHHTgC893dW5U3
-qwIka6GFsq30Mhdpk2+YwBFsc0vvXY64XTSn8DNuwXJmuMko+7nmEKSx+/CBaQY1
-nmUCLcC2vdcAuUyKPxJ+y3lk4F6O3gJoeyymWpDV6l90XNXSK+VitUrI+iFBqG8K
-1j0wyEKl/4Ly8Ry4axodP6askaA0o8KIGlxbMYv2IkEdAgMBAAE=
------END PUBLIC KEY-----)";
-
 // Private key for signing messages (PEM format)
 const std::string kSenderPrivateKeyPem = R"(-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC+MZnAUHRoeB32
@@ -66,7 +53,7 @@ csVO5YRYAlpc1DgLAVaB+2j0vwD7cerU2Y5tNxtTSVGZbABUQmKmzIecWKsE2AKI
 EPMxH8hoznzjgYsWN0s24LPo
 -----END PRIVATE KEY-----)";
 
-const std::string kSenderPublicKeyPem = R"(-----BEGIN PUBLIC KEY-----
+const std::string kReceiverPublicKeyPem = R"(-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhkaHXuDKr8N2glMxtTRU
 YqCdR6cjFgtbr2kipmrDscBtd/vKzRgfQWQlr55aAdeVGd0QPEdSBubXRqNjYeg1
 vfHWMj0lq9ZRpPrhk5gO/F4TKxT/AFG3rP3wvS138sbctK4YoyRb+yeg5Mw3dsgi
@@ -271,17 +258,52 @@ int receive_symmetric_key(mqd_t mq, const Botan::RSA_PrivateKey& private_key,
     std::vector<uint8_t> encrypted_data(bytes_received);
     std::memcpy(encrypted_data.data(), buffer.data(), bytes_received);
 
-    std::cout << "[Sender] Received encrypted symmetric key (" << bytes_received << " bytes)\n";
+    std::cout << "[Sender] Received encrypted symmetric key + signature + signature size (" << bytes_received << " bytes)\n";
     print_vector_hex_n(encrypted_data, 10);
     std::cout << "\n";
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(40000));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(40000));
 
-    // TODO: Fix with signature verification
+    // Verify signature using receiver's public key (PEM format)
+    Botan::DataSource_Memory key_source(kReceiverPublicKeyPem);
+    std::unique_ptr<Botan::Public_Key> public_key = Botan::X509::load_key(key_source);
+    Botan::PK_Verifier verifier(*public_key, "PSS(SHA-256)");
+    const size_t signature_size =
+        (static_cast<size_t>(encrypted_data[encrypted_data.size() - 2]) << 8) |
+        static_cast<size_t>(encrypted_data[encrypted_data.size() - 1]);
+    
+    if (encrypted_data.size() < signature_size) {
+        std::cerr << "[Sender] Received data is smaller than signature size\n";
+        return kNOT_OK;
+    }
 
-    // Copy the encrypted data with 16 bytes less for CMAC
-    std::vector<uint8_t> encrypted_key(
-        encrypted_data.begin(), encrypted_data.end());
+    // Separate encrypted symmetric key and signature
+    const size_t encrypted_key_size = encrypted_data.size() - signature_size - 2;
+    std::vector<uint8_t> encrypted_key(encrypted_key_size);
+    std::vector<uint8_t> signature(signature_size);
+    std::memcpy(encrypted_key.data(), encrypted_data.data(), encrypted_key_size);
+    std::memcpy(signature.data(), encrypted_data.data() + encrypted_key_size, signature_size);
+
+    // Print received encrypted symmetric key in hex
+    std::cout << "[Sender] Received encrypted symmetric key (" << encrypted_key_size << " bytes)\n";
+    print_vector_hex_n(encrypted_key, 10);
+    std::cout << "\n";
+
+    // Print received signature in hex
+    std::cout << "[Sender] Received signature (" << signature_size << " bytes)\n";
+    print_vector_hex_n(signature, 10);
+    std::cout << "\n";
+
+    std::cout << "[Sender] Verifying symmetric key signature...\n";
+    if (!verifier.verify_message(encrypted_key, signature)) {
+        std::cerr << "[Sender] RESULT: Signature verification failed!\n";
+        std::cout << "\n";
+        return kNOT_OK;
+    }
+    else {
+        std::cout << "[Sender] RESULT: Signature verification succeeded\n";
+        std::cout << "\n";
+    }
 
     // Decrypt the symmetric key using RSA private key (Bootan::secure_vector)
     Botan::AutoSeeded_RNG rng;
@@ -296,7 +318,10 @@ int receive_symmetric_key(mqd_t mq, const Botan::RSA_PrivateKey& private_key,
     // Botan::secure_vector to std::vector
     symmetric_key.assign(symmetric_key_secure.begin(), symmetric_key_secure.end());
 
-    std::fill(buffer.begin(), buffer.end(), 0);  // Clear sensitive data
+    // Clear sensitive data
+    std::fill(encrypted_key.begin(), encrypted_key.end(), 0);
+    std::fill(signature.begin(), signature.end(), 0);
+    std::fill(buffer.begin(), buffer.end(), 0);
 
     std::cout << "[Sender] Received symmetric key (" << symmetric_key.size() << " bytes)\n";
     return kOK;
