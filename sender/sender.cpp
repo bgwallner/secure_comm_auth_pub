@@ -3,6 +3,7 @@
 #include <mqueue.h>
 
 // C++ standard library headers
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstddef>
@@ -167,7 +168,7 @@ int send_public_key(mqd_t mq, const Botan::RSA_PublicKey& public_key)
 
     // Ensure the message fits in the queue
     if (der.size() > kMessageSize) {
-        std::cerr << "[Sender] Public key + signature + signature size too large for message queue\n";
+        std::cout << "[Sender] Public key + signature + signature size too large for message queue\n";
         std::cin.get();
         return kNOT_OK;
     }
@@ -185,6 +186,10 @@ int send_public_key(mqd_t mq, const Botan::RSA_PublicKey& public_key)
     }
 
     std::cout << "[Sender] Sent public key + signature + signature size (" << der.size() << " bytes)\n";
+
+    // Clear sensitive data from buffers
+    std::fill(der.begin(), der.end(), 0xFF);
+    std::fill(signature.begin(), signature.end(), 0xFF);
 
     return kOK;
 }
@@ -215,8 +220,8 @@ int send_periodic_message(mqd_t mq, std::vector<uint8_t>& symmetric_key) {
         mac_vec.push_back(byte);
       }
 
-      // Insert CMAC at the end of the buffer
-      std::memcpy(buffer.data() + kBufferSize, mac_vec.data(), kCmacSize);
+    // Place CMAC into the reserved tail of the pre-sized buffer
+    std::copy(mac_vec.begin(), mac_vec.end(), buffer.begin() + kBufferSize);
 
       const int send_result =
           mq_send(mq, reinterpret_cast<const char*>(buffer.data()), buffer.size(), 0);
@@ -243,10 +248,8 @@ int receive_symmetric_key(mqd_t mq, const Botan::RSA_PrivateKey& private_key,
 
     std::vector<uint8_t> buffer(kMessageSize);
 
-    unsigned int msg_prio;
-
     const ssize_t bytes_received = mq_receive(
-        mq, reinterpret_cast<char*>(buffer.data()), buffer.size(), &msg_prio);
+        mq, reinterpret_cast<char*>(buffer.data()), buffer.size(), nullptr);
 
     if (bytes_received == -1) {
       perror("mq_receive");
@@ -255,14 +258,12 @@ int receive_symmetric_key(mqd_t mq, const Botan::RSA_PrivateKey& private_key,
       return kNOT_OK;
     }
 
-    std::vector<uint8_t> encrypted_data(bytes_received);
-    std::memcpy(encrypted_data.data(), buffer.data(), bytes_received);
+    std::vector<uint8_t> encrypted_data;
+    encrypted_data.assign(buffer.begin(), buffer.begin() + bytes_received);
 
     std::cout << "[Sender] Received encrypted symmetric key + signature + signature size (" << bytes_received << " bytes)\n";
     print_vector_hex_n(encrypted_data, 10);
     std::cout << "\n";
-
-    //std::this_thread::sleep_for(std::chrono::milliseconds(40000));
 
     // Verify signature using receiver's public key (PEM format)
     Botan::DataSource_Memory key_source(kReceiverPublicKeyPem);
@@ -271,18 +272,19 @@ int receive_symmetric_key(mqd_t mq, const Botan::RSA_PrivateKey& private_key,
     const size_t signature_size =
         (static_cast<size_t>(encrypted_data[encrypted_data.size() - 2]) << 8) |
         static_cast<size_t>(encrypted_data[encrypted_data.size() - 1]);
-    
-    if (encrypted_data.size() < signature_size) {
-        std::cerr << "[Sender] Received data is smaller than signature size\n";
+
+    if (encrypted_data.size() < (signature_size + 2)) {
+        std::cout << "[Sender] Received data is smaller than signature size\n";
         return kNOT_OK;
     }
 
     // Separate encrypted symmetric key and signature
     const size_t encrypted_key_size = encrypted_data.size() - signature_size - 2;
-    std::vector<uint8_t> encrypted_key(encrypted_key_size);
-    std::vector<uint8_t> signature(signature_size);
-    std::memcpy(encrypted_key.data(), encrypted_data.data(), encrypted_key_size);
-    std::memcpy(signature.data(), encrypted_data.data() + encrypted_key_size, signature_size);
+    std::vector<uint8_t> encrypted_key;
+    std::vector<uint8_t> signature;
+    encrypted_key.assign(encrypted_data.begin(), encrypted_data.begin() + encrypted_key_size);
+    signature.assign(encrypted_data.begin() + encrypted_key_size,
+                     encrypted_data.begin() + encrypted_key_size + signature_size);
 
     // Print received encrypted symmetric key in hex
     std::cout << "[Sender] Received encrypted symmetric key (" << encrypted_key_size << " bytes)\n";
@@ -319,9 +321,9 @@ int receive_symmetric_key(mqd_t mq, const Botan::RSA_PrivateKey& private_key,
     symmetric_key.assign(symmetric_key_secure.begin(), symmetric_key_secure.end());
 
     // Clear sensitive data
-    std::fill(encrypted_key.begin(), encrypted_key.end(), 0);
-    std::fill(signature.begin(), signature.end(), 0);
-    std::fill(buffer.begin(), buffer.end(), 0);
+    std::fill(encrypted_key.begin(), encrypted_key.end(), 0xFF);
+    std::fill(signature.begin(), signature.end(), 0xFF);
+    std::fill(encrypted_data.begin(), encrypted_data.end(), 0xFF);
 
     std::cout << "[Sender] Received symmetric key (" << symmetric_key.size() << " bytes)\n";
     return kOK;

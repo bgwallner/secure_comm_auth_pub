@@ -142,7 +142,8 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
     const size_t signature_size = static_cast<size_t>(pub_key_buffer[received_bytes - 2]) << 8 |
                                    static_cast<size_t>(pub_key_buffer[received_bytes - 1]);
 
-    if (static_cast<size_t>(received_bytes) < signature_size) {
+    // Sanity check
+    if (pub_key_buffer.size() < (signature_size + 2)) {
         std::cerr << "[Receiver] Received data is smaller than signature size\n";
         return kNOT_OK;
     }
@@ -192,6 +193,11 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
     std::cout << "[Receiver] The received RSA Public Key in PEM format\n";
     std::cout << "\n";
     std::cout << pem << std::endl;
+
+    // Clear sensitive data from buffers
+    std::fill(pub_key_buffer.begin(), pub_key_buffer.end(), 0xFF);
+    std::fill(der_data.begin(), der_data.end(), 0xFF);
+    std::fill(signature_data.begin(), signature_data.end(), 0xFF);
 
     return kOK;
 }
@@ -246,6 +252,11 @@ int send_symmetric_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key,
 
     std::cout << "[Receiver] Sent encrypted symmetric key + signature + signature size (" << encrypted_key.size() << " bytes)\n";
     std::cout << "\n";
+
+    // Clear sensitive data from buffers
+    std::fill(encrypted_key.begin(), encrypted_key.end(), 0xFF);
+    std::fill(signature.begin(), signature.end(), 0xFF);
+
     return kOK;
 }
 
