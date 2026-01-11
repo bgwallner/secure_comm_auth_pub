@@ -207,7 +207,7 @@ int send_periodic_message(mqd_t mq, std::vector<uint8_t>& symmetric_key) {
 
     for (int message_index = 0; message_index < kNumMessagesToSend; ++message_index) {
       // Add a byte counter at the end of the message
-      buffer[19] = static_cast<uint8_t>(message_index % 256);
+      buffer[kBufferSize-1] = static_cast<uint8_t>(message_index % 256);
 
       // Calculate CMAC of the buffer (first kBufferSize bytes)
       mac->update(reinterpret_cast<const uint8_t*>(buffer.data()), kBufferSize);

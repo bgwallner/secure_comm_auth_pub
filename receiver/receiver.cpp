@@ -115,6 +115,26 @@ void print_botan_secure_hex(const Botan::secure_vector<uint8_t>& vec) {
     std::cout << "\n";
 }
 
+// Check freshness counter, wraps around at 256
+int check_freshness_counter(uint8_t counter) {
+    int status{kOK};
+    static uint8_t last_counter{0xFF};
+
+    std::cout << "[Receiver] Checking freshness: Last Counter = " << static_cast<unsigned int>(last_counter)
+              << ", Current Counter = " << static_cast<unsigned int>(counter) << "\n";
+
+    uint8_t delta = counter - last_counter;
+
+    if (delta == 0 || delta > 128) { 
+        std::cerr << "[Receiver] WARNING: Received stale or replayed message!\n";
+        status = kNOT_OK;
+    } else {
+        last_counter = counter;
+    }
+
+    return status;
+}
+
 int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
 {
     std::vector<uint8_t> pub_key_buffer(kMessageSize);
@@ -278,6 +298,14 @@ int receive_periodic_messages(mqd_t mq, std::vector<uint8_t>& symmetric_key) {
           std::cout << "[Receiver] Received " << received_bytes << " bytes \n";
           print_vector_hex(temp_vec);
 
+          // Extract counter from the received message
+          uint8_t counter = temp_vec[kBufferSize-1];
+          if(check_freshness_counter(counter) != kOK) {
+              std::cout << "[Receiver] RESULT: Freshness check failed. Dropping message.\n";
+              continue;
+          } else {
+              std::cout << "[Receiver] RESULT: Freshness check passed.\n";
+          }
 
           // Extract received CMAC
           std::vector<uint8_t> received_cmac(temp_vec.end() - kCmacSize, temp_vec.end());
@@ -299,10 +327,10 @@ int receive_periodic_messages(mqd_t mq, std::vector<uint8_t>& symmetric_key) {
 
          // Verify CMAC
          if (received_cmac != calculated_cmac_vec) {
-             std::cerr << "[Receiver] CMAC verification failed!\n";
+             std::cerr << "[Receiver] RESULT: CMAC verification failed!\n";
          }
          else {
-            std::cout << "[Receiver] CMAC verification succeeded\n";
+            std::cout << "[Receiver] RESULT: CMAC verification succeeded\n";
          }
 
         } else {
