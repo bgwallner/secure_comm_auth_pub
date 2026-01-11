@@ -207,7 +207,7 @@ This section analyzes the cryptographic design choices for educational purposes.
 |-------|---------|------------------------|
 | **Hardcoded Keys** | Pre-shared keys in code | Use secure key management (HSM, cloud KMS) |
 | **No Encryption** | Plaintext periodic messages | Add AES-GCM for confidentiality |
-| **No Replay Protection** | Messages not timestamped/sequenced | Add nonces, timestamps, or message counters |
+| **Limited Counter Range** | 8-bit counter (0-255, wraps at 256) | 32-bit or 64-bit sequence numbers for longer sessions |
 | **Static Key Pairs** | Sender's RSA key never changes | Rotate keys regularly (monthly/yearly) |
 | **No Key Derivation** | Symmetric key used directly | Use KDF (HKDF) to derive multiple keys (encryption, authentication) |
 | **No TLS** | Custom protocol | Use TLS 1.3 (mature, audited, standardized) |
@@ -238,6 +238,12 @@ This section analyzes the cryptographic design choices for educational purposes.
    - Using `std::vector`, `std::fill()` instead of raw pointers and `std::memcpy()`
    - Automatic cleanup of sensitive data
 
+6. ✅ **Replay Attack Mitigation**
+   - Sender embeds an 8-bit message counter at `buffer[19]` (line 203 in sender.cpp)
+   - Receiver validates counter with `check_freshness_counter()` (line 119 in receiver.cpp)
+   - Uses delta checking: rejects duplicates (delta == 0) and out-of-order messages (delta > 128)
+   - Limitation: Counter wraps at 256, so max 128 messages per session before wrapping; production systems use 32/64-bit sequence numbers
+
 **What Production Systems Would Add:**
 
 1. ❌ **TLS Handshake** – Standardized, peer-reviewed protocol instead of custom exchange
@@ -246,7 +252,7 @@ This section analyzes the cryptographic design choices for educational purposes.
 4. ❌ **Key Derivation** – HKDF to derive multiple keys from one shared secret
 5. ❌ **Perfect Forward Secrecy** – Ephemeral Diffie-Hellman or ECDH for session keys
 6. ❌ **Authenticated Encryption** – Encrypt-then-MAC or built-in AEAD modes
-7. ❌ **Replay & Reordering Protection** – Sequence numbers, timestamps, nonces
+7. ❌ **Extended Sequence Numbers** – 32-bit or 64-bit counters instead of 8-bit
 
 ### Recommended Reading
 
