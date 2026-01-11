@@ -261,3 +261,16 @@ This section analyzes the cryptographic design choices for educational purposes.
 - [RFC 8446 (TLS 1.3)](https://tools.ietf.org/html/rfc8446) – Modern reference implementation
 - [Serious Cryptography](https://nostarch.com/seriouscryptography) by Jean-Philippe Aumasson – Practical guide to cryptographic design
 
+## License
+
+This project is licensed under the MIT License – see [LICENSE](LICENSE) for details.
+
+**Attribution:** Original implementation by Bo-Göran Wallner (2026), Independent academic contributor
+
+The MIT License permits free use, modification, and distribution, provided that the original copyright notice and license text are included in any derivative works or distributions.
+
+### Third-Party Dependencies
+
+- **Botan 3.10.0** – Released under the Simplified BSD License ([license](https://botan.randombit.net/))
+- **POSIX Message Queues** – Part of the POSIX standard library (no license restriction)
+
