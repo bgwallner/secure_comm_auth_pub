@@ -144,3 +144,114 @@ Run both sender and receiver processes simultaneously. Output includes:
 - Success/failure messages for cryptographic operations
 - Sent/received message counts and CMACs
 
+## Cryptographic Analysis
+
+This section analyzes the cryptographic design choices for educational purposes.
+
+### Key Exchange Analysis
+
+**RSA-2048 Public Key Exchange**
+- **Strength:** 2048-bit RSA provides ~112-bits of symmetric strength (adequate for legacy systems; NIST recommends 2048-bit minimum until 2030)
+- **Weakness:** RSA is slow; modern designs use ECDH (e.g., Curve25519) for key exchange
+- **Educational Value:** Demonstrates asymmetric encryption fundamentals and X.509 DER encoding
+- **Production Concern:** Subject to Shor's algorithm on quantum computers; quantum-resistant alternatives (Kyber, Dilithium) should be considered
+
+**Pre-shared Authentication Keys**
+- **Strength:** Mutual authentication via embedded private keys prevents man-in-the-middle attacks
+- **Weakness:** Out-of-band key distribution required; keys hardcoded in code (security anti-pattern)
+- **Educational Value:** Shows how pre-shared secrets enable entity authentication
+- **Production Improvement:** Use PKI with certificate authorities (CAs) and certificate pinning instead
+
+### Symmetric Encryption Analysis
+
+**AES-128**
+- **Strength:** AES is NIST-approved; 128-bit keys sufficient for most applications (2^128 brute force is infeasible)
+- **Note:** No explicit encryption mode used in this example (symmetric key is just transmitted and verified). In production, would need authenticated encryption (AES-GCM or ChaCha20-Poly1305)
+- **Educational Value:** Demonstrates random symmetric key generation and secure key transport
+- **Missing:** Encryption of periodic messages—only CMAC authentication used. Should add AES-GCM or similar for confidentiality + integrity
+
+### Digital Signature Analysis
+
+**RSA-PSS(SHA-256)**
+- **Strength:** PSS (Probabilistic Signature Scheme) is more secure than PKCS#1 v1.5; includes salt for randomness
+- **Weakness:** RSA signatures are large (~256 bytes for 2048-bit RSA); slower than ECDSA
+- **Educational Value:** Shows how signatures prove authenticity without encryption
+- **Alternative:** EdDSA (Ed25519) offers shorter signatures and better performance; recommended for new designs
+
+**Double-Signature Pattern**
+- **Why It's Used Here:**
+  - Sender signs public key with pre-shared private key → proves sender's identity
+  - Receiver signs encrypted key with pre-shared private key → proves receiver's identity
+- **Strength:** Mutual authentication established before symmetric key use
+- **Teaching Point:** Demonstrates how signatures can authenticate both endpoints
+
+### Message Authentication (CMAC) Analysis
+
+**CMAC(AES-128)**
+- **Strength:** NIST-approved; provides 128-bit authentication tags; secure against forgery
+- **Educational Value:** Shows how MACs ensure message integrity without encryption (confidentiality not provided)
+- **When to Use:** CMAC when only integrity/authenticity needed; use AEAD (AES-GCM, ChaCha20-Poly1305) for confidentiality + integrity
+- **Note:** In this example, periodic messages are sent in **plaintext with CMAC**—contents are visible but tamper-evident. For confidential messages, encrypt first, then MAC (encrypt-then-MAC pattern)
+
+### Protocol Design Analysis
+
+**Strengths:**
+1. **Sequential Authentication:** Public key validated before symmetric key exchange
+2. **Mutual Authentication:** Both parties sign their contributions
+3. **Perfect Forward Secrecy (PFS):** New symmetric key per session (not maintained across sessions)
+4. **Separation of Concerns:** Key exchange, key derivation, and message authentication are distinct phases
+
+**Weaknesses & Improvements for Production:**
+
+| Issue | Current | Production Alternative |
+|-------|---------|------------------------|
+| **Hardcoded Keys** | Pre-shared keys in code | Use secure key management (HSM, cloud KMS) |
+| **No Encryption** | Plaintext periodic messages | Add AES-GCM for confidentiality |
+| **No Replay Protection** | Messages not timestamped/sequenced | Add nonces, timestamps, or message counters |
+| **Static Key Pairs** | Sender's RSA key never changes | Rotate keys regularly (monthly/yearly) |
+| **No Key Derivation** | Symmetric key used directly | Use KDF (HKDF) to derive multiple keys (encryption, authentication) |
+| **No TLS** | Custom protocol | Use TLS 1.3 (mature, audited, standardized) |
+| **Single CMAC Key** | All messages authenticated with same key | Different keys for different message types |
+| **Message Size Limit** | Fixed 20-byte payload | Support variable-length messages |
+
+### Teaching Lessons
+
+**What This Example Demonstrates:**
+
+1. ✅ **Asymmetric vs. Symmetric Cryptography**
+   - RSA for authentication and key exchange (slower, public/private)
+   - AES for symmetric operations (faster, single key)
+
+2. ✅ **Digital Signatures**
+   - How RSA-PSS creates unforgeable proofs of identity
+   - Signature verification using public keys
+
+3. ✅ **Message Authentication Codes (MACs)**
+   - CMAC ensures integrity without encryption
+   - Difference between confidentiality and authenticity
+
+4. ✅ **Secure Key Transport**
+   - Encrypting the symmetric key before transmission
+   - Signing encrypted data for authenticity
+
+5. ✅ **Safe Memory Management in C++**
+   - Using `std::vector`, `std::fill()` instead of raw pointers and `std::memcpy()`
+   - Automatic cleanup of sensitive data
+
+**What Production Systems Would Add:**
+
+1. ❌ **TLS Handshake** – Standardized, peer-reviewed protocol instead of custom exchange
+2. ❌ **Certificate Validation** – X.509 certificate chains instead of pre-shared keys
+3. ❌ **AEAD Cipher** – AES-GCM or ChaCha20-Poly1305 for confidentiality + integrity in one operation
+4. ❌ **Key Derivation** – HKDF to derive multiple keys from one shared secret
+5. ❌ **Perfect Forward Secrecy** – Ephemeral Diffie-Hellman or ECDH for session keys
+6. ❌ **Authenticated Encryption** – Encrypt-then-MAC or built-in AEAD modes
+7. ❌ **Replay & Reordering Protection** – Sequence numbers, timestamps, nonces
+
+### Recommended Reading
+
+- [NIST Special Publication 800-175B](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-175B.pdf) – Guideline for Cryptographic Algorithms
+- [RFC 5116](https://tools.ietf.org/html/rfc5116) – CRYPTOGRAPHIC ALGORITHM INTERFACE AND USAGE
+- [RFC 8446 (TLS 1.3)](https://tools.ietf.org/html/rfc8446) – Modern reference implementation
+- [Serious Cryptography](https://nostarch.com/seriouscryptography) by Jean-Philippe Aumasson – Practical guide to cryptographic design
+
