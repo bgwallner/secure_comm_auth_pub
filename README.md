@@ -29,10 +29,12 @@ This project implements a cryptographic communication protocol using POSIX messa
 
 2. RECEIVER VALIDATES & SENDS SYMMETRIC KEY
    - Verify sender's public key signature using pre-shared public key
-   - Generate random 128-bit symmetric key
-   - Encrypt symmetric key with sender's RSA public key using EME1(SHA-256)
+   - Generate random 128-bit symmetric key (16 bytes)
+   - Prepend receiver ID to symmetric key → 17-byte vector [ID byte] + [16-byte key]
+   - Encrypt this 17-byte vector with sender's RSA public key using EME1(SHA-256)
    - Sign encrypted key with receiver's pre-shared private key using PSS(SHA-256)
    - Send: [encrypted key] + [signature] + [signature size (2 bytes)]
+   - Note: Original 16-byte symmetric key is preserved and returned for use in message authentication
 
 3. SENDER DECRYPTS SYMMETRIC KEY
    - Verify encrypted key signature using receiver's pre-shared public key
@@ -118,18 +120,98 @@ The receiver waits for the sender to initiate the protocol. Both processes excha
 - `send_periodic_message()` – Compute CMAC and send authenticated messages
 
 **receiver.cpp:**
-- `get_public_key()` – Verify sender's public key signature
-- `send_symmetric_key()` – Generate, encrypt, and sign symmetric key
-- `receive_periodic_messages()` – Verify CMAC on incoming messages
+- `get_public_key()` – Verify sender's public key signature; remove prepended ID byte before DER loading (critical for correct key deserialization)
+- `send_symmetric_key()` – Generate 16-byte symmetric key; prepend ID to create 17-byte vector; encrypt and sign; return 16-byte key unchanged
+- `receive_periodic_messages()` – Verify CMAC on incoming messages using the 16-byte symmetric key
 
-### Vector Usage
+### Vector Usage & Memory Management
 
 The code uses `std::vector` functionality for safe, idiomatic C++ memory management:
-- `vector::assign()` – Copy data from iterators
-- `vector::insert()` – Append data to vectors
-- Iterator-based operations avoid raw `std::memcpy()` calls
+- `vector::assign()` – Copy data from iterators for safe data movement
+- `vector::insert()` and `vector::erase()` – Modify vectors safely without raw pointers
+- Pre-allocation – Allocate exact size when known (e.g., 17-byte temporary vector for ID + symmetric key) to avoid unnecessary reallocations
+- Iterator-based operations – Use `std::copy()` and iterators instead of raw `std::memcpy()` calls
+- Secure erasure – Clear sensitive data with `std::fill()` after use to prevent memory disclosure
+
+**Key Implementation Detail:** The `send_symmetric_key()` function demonstrates best practices:
+- Input/output contract: 16-byte symmetric key in, 16-byte symmetric key out
+- Separate temporary 17-byte vector created for [ID byte] + [symmetric key] to avoid modifying the input parameter
+- This maintains clear separation of concerns and prevents accidental parameter modification
+
+## Bug Fixes & Implementation Notes
+
+### DER Deserialization Fix
+**Issue:** In `get_public_key()`, after removing the prepended ID byte with `erase()`, the size parameter passed to `DataSource_Memory` must be adjusted.
+- `der_data.erase(der_data.begin())` removes 1 byte from the vector
+- Size parameter must be `der_size - 1` (not `der_size`) to avoid reading beyond valid data
+- This ensures the DER parser correctly deserializes the RSA public key
+
+### Symmetric Key Handling
+**Design Decision:** The receiver generates a 16-byte symmetric key for CMAC computation. Before encryption:
+1. A separate 17-byte temporary vector is created: `[receiver_id_byte] + [16-byte_key]`
+2. This 17-byte vector is encrypted and signed
+3. The original 16-byte symmetric key is preserved unchanged
+4. This pattern ensures:
+   - Clear input/output contract for function parameters
+   - No accidental modification of data used for MAC operations
+   - Proper separation of the key transport layer from the authentication layer
 
 ## Security Considerations
+
+### ID Binding in Signatures & Encryption
+
+**Purpose:** Prepending entity IDs to data before signing or encrypting creates a cryptographic binding between the data and the intended recipient/sender. This prevents several attack vectors:
+
+**Sender ID Binding (sender → receiver public key):**
+- Public key data is prepended with `kIdSender (0xAA)` before signing
+- Signature verifies: `SIGN(sender_id || DER_public_key)`
+- **Security Benefit:** Ensures the signature is for this specific sender, not for another sender
+- **Attack Prevented:** Signature substitution – attacker cannot take sender A's public key signature and claim it as sender B's key
+
+**Receiver ID Binding (receiver → encrypted symmetric key):**
+- Symmetric key is prepended with `kIdReceiver (0xBB)` before encryption: `[0xBB] + [16-byte_key]`
+- This 17-byte vector is encrypted: `RSA_ENCRYPT(receiver_id || symmetric_key)`
+- Then signed: `SIGN(encrypted_key)`
+- **Security Benefit:** Receiver's ID is cryptographically bound to the symmetric key
+- **Attack Prevented:** 
+  1. **Cross-recipient message injection** – In a multi-party system, attacker cannot redirect receiver A's encrypted key to receiver B (the decrypted key would have wrong ID)
+  2. **Symmetric key confusion** – Ensures the decrypted key is bound to the receiver who generated it
+
+**Practical Example of Attack Prevented:**
+```
+Scenario: 3 endpoints (Sender, ReceiverA, ReceiverB)
+
+Without ID Binding:
+1. Sender encrypts symmetric_key with ReceiverA's RSA key
+2. Attacker intercepts and redirects to ReceiverB
+3. ReceiverB decrypts successfully using own private key (if RSA key reuse)
+4. ReceiverB now has wrong key, gets confused state
+
+With ID Binding:
+1. Sender encrypts [0xBB_A || symmetric_key] with ReceiverA's RSA key
+2. Attacker redirects to ReceiverB
+3. ReceiverB decrypts: [0xBB_A || symmetric_key]
+4. ReceiverB checks ID: 0xBB_A ≠ 0xBB_B (own ID)
+5. ReceiverB rejects message, attack detected
+```
+
+**Implementation in Code:**
+- **sender.cpp line 90:** `der.insert(der.begin(), static_cast<uint8_t>(kIdSender));`
+- **receiver.cpp line 263:** `symmetric_key_with_id[0] = static_cast<uint8_t>(kIdReceiver);`
+- **receiver.cpp line 313:** Sender verifies receiver ID matches: `if (symmetric_key_secure[0] != static_cast<uint8_t>(kIdReceiver))`
+
+**Limitation (Two-Party System):**
+This protocol is designed for a fixed sender-receiver pair. In a true multi-party system, you would need:
+- Dynamic endpoint IDs (not hardcoded constants)
+- Per-message sender/receiver fields
+- Verify IDs match expected parties before processing
+
+**Recommendation for Students:**
+Extend the protocol to support 3+ parties:
+1. Add sender_id and receiver_id fields to messages
+2. Include them in CMAC calculation: `CMAC_input = [sender_id][receiver_id][counter][payload]`
+3. Verify IDs match before accepting messages
+4. This provides explicit party binding in addition to implicit ID binding in signatures
 
 - **Pre-shared Keys:** Sender and receiver have pre-configured RSA key pairs for mutual authentication
 - **Random Symmetric Key:** Generated fresh each session using `AutoSeeded_RNG`
