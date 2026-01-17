@@ -24,8 +24,9 @@ This project implements a cryptographic communication protocol using POSIX messa
 ```
 1. SENDER SENDS RSA PUBLIC KEY
    - Generate RSA 2048-bit key pair
-   - Sign public key with pre-shared private key using PSS(SHA-256)
-   - Send: [DER-encoded public key] + [signature] + [signature size (2 bytes)]
+   - Prepend sender ID to public key DER data: [sender_id_byte] + [DER-encoded public key]
+   - Sign this combined data with pre-shared private key using PSS(SHA-256)
+   - Send: [sender_id + DER-encoded public key] + [signature] + [signature size (2 bytes)]
 
 2. RECEIVER VALIDATES & SENDS SYMMETRIC KEY
    - Verify sender's public key signature using pre-shared public key
