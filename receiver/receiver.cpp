@@ -140,7 +140,7 @@ int check_freshness_counter(uint8_t counter) {
     uint8_t delta = counter - last_counter;
 
     if (delta == 0 || delta > 128) { 
-        std::cerr << "[Receiver] WARNING: Received stale or replayed message!\n";
+        std::cout << "[Receiver] WARNING: Received stale or replayed message!\n";
         status = kNOT_OK;
     } else {
         last_counter = counter;
@@ -175,7 +175,7 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
     // Check if the ID matches the expected sender ID
     std::cout << "[Receiver] Checking sender ID...\n";
     if (pub_key_buffer[0] != static_cast<uint8_t>(kIdSender)) {
-        std::cerr << "[Receiver] Received key does not match expected sender ID\n";
+        std::cout << "[Receiver] Received sender ID does not match expected sender ID\n";
         return kNOT_OK;
     }
 
@@ -188,7 +188,7 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
 
     // Sanity check
     if (pub_key_buffer.size() < (signature_size + 2)) {
-        std::cerr << "[Receiver] Received data is smaller than signature size\n";
+        std::cout << "[Receiver] Received data is smaller than signature size\n";
         return kNOT_OK;
     }
 
@@ -211,7 +211,7 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
 
     std::cout << "[Receiver] Verifying ID + public key signature...\n";
     if (!verifier.verify_message(der_data, signature_data)) {
-        std::cerr << "[Receiver] RESULT: Signature verification failed!\n";
+        std::cout << "[Receiver] RESULT: Signature verification failed!\n";
         return kNOT_OK;
     }
     std::cout << "[Receiver] RESULT: Signature verification succeeded\n";
@@ -221,10 +221,10 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
     // Remove the prepended ID byte before loading the key
     der_data.erase(der_data.begin());
 
-    // Load the public key from DER data
+    // Load the public key from DER data (remember to exclude the ID byte)
     Botan::DataSource_Memory ds(
         reinterpret_cast<const uint8_t*>(der_data.data()),
-        der_size
+        der_size - 1
     );
 
     public_key = Botan::X509::load_key(ds);
@@ -232,7 +232,7 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
     // Ensure it is RSA
     auto* rsa = dynamic_cast<Botan::RSA_PublicKey*>(public_key.get());
     if (!rsa) {
-        std::cerr << "[Receiver] Received key is not an RSA public key\n";
+        std::cout << "[Receiver] Received key is not an RSA public key\n";
         return kNOT_OK;
     }
 
@@ -259,11 +259,19 @@ int send_symmetric_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key,
     print_vector_hex_n(symmetric_key, 10);
     std::cout << "\n";
 
+    // Prepare new vector with prepended receiver ID
+    std::vector<uint8_t> symmetric_key_with_id = symmetric_key;
+    symmetric_key_with_id.insert(symmetric_key_with_id.begin(), static_cast<uint8_t>(kIdReceiver));
+    std::cout << "[Receiver] Prepended ID to symmetric key\n";
+    print_vector_hex_n(symmetric_key_with_id, 10);
+    std::cout << "\n";
+
+
     // Encrypt the symmetric key using the received RSA public key (from Sender)
     Botan::RSA_PublicKey* rsa = dynamic_cast<Botan::RSA_PublicKey*>(public_key.get());
     Botan::PK_Encryptor_EME encryptor(*rsa, rng, "EME1(SHA-256)");
-    std::vector<uint8_t> encrypted_key = encryptor.encrypt(symmetric_key, rng);
-    std::cout << "[Receiver] Encrypted symmetric key with RSA public key (" << encrypted_key.size() << " bytes)\n";
+    std::vector<uint8_t> encrypted_key = encryptor.encrypt(symmetric_key_with_id, rng);
+    std::cout << "[Receiver] Encrypted ID + symmetric key with RSA public key (" << encrypted_key.size() << " bytes)\n";
     print_vector_hex_n(encrypted_key, 10);
     std::cout << "\n";
 
@@ -272,7 +280,7 @@ int send_symmetric_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key,
     std::unique_ptr<Botan::Private_Key> receiver_private_key = Botan::PKCS8::load_key(receiver_key_source);
     Botan::PK_Signer signer(*receiver_private_key, rng, "PSS(SHA-256)");
     std::vector<uint8_t> signature = signer.sign_message(encrypted_key, rng);
-    std::cout << "[Receiver] Signature of the encrypted symmetric key (" << signature.size() << " bytes)\n";
+    std::cout << "[Receiver] Signature of the encrypted ID + symmetric key (" << signature.size() << " bytes)\n";
     print_vector_hex_n(signature, 10);
     std::cout << "\n";
 
@@ -297,12 +305,13 @@ int send_symmetric_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key,
         return kNOT_OK;
     }
 
-    std::cout << "[Receiver] Sent encrypted symmetric key + signature + signature size (" << encrypted_key.size() << " bytes)\n";
+    std::cout << "[Receiver] Sent encrypted ID + symmetric key + signature + signature size (" << encrypted_key.size() << " bytes)\n";
     std::cout << "\n";
 
     // Clear sensitive data from buffers
     std::fill(encrypted_key.begin(), encrypted_key.end(), 0xFF);
     std::fill(signature.begin(), signature.end(), 0xFF);
+    std::fill(symmetric_key_with_id.begin(), symmetric_key_with_id.end(), 0xFF);
 
     return kOK;
 }
@@ -354,7 +363,7 @@ int receive_periodic_messages(mqd_t mq, std::vector<uint8_t>& symmetric_key) {
 
          // Verify CMAC
          if (received_cmac != calculated_cmac_vec) {
-             std::cerr << "[Receiver] RESULT: CMAC verification failed!\n";
+             std::cout << "[Receiver] RESULT: CMAC verification failed!\n";
          }
          else {
             std::cout << "[Receiver] RESULT: CMAC verification succeeded\n";
