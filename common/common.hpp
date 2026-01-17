@@ -56,8 +56,15 @@ inline constexpr unsigned int kMessageIdRsaPublicKey = 0;
 inline constexpr unsigned int kMessageIdSymKey = 1;
 inline constexpr unsigned int kMessageIdPeriodic = 2;
 
+// Status codes
 inline constexpr unsigned int kOK{0};
 inline constexpr unsigned int kNOT_OK{1};
+
+// ID for sender (used for binding ID to signature/mac)
+constexpr int kIdSender = 0xAA;
+
+// ID for receiver (used for binding ID to signature/mac)
+constexpr int kIdReceiver = 0xBB;
 
 
 

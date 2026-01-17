@@ -164,13 +164,23 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
         return kNOT_OK;
     }
 
-    std::cout << "[Receiver] Received public key + signature + size (" << received_bytes << " bytes)\n";
+    std::cout << "[Receiver] Received ID + public key + signature + size (" << received_bytes << " bytes)\n";
     std::cout << "\n";
 
     // Verify the signature using pre-shared sender's public key (kSenderPublicKeyPem)
     Botan::DataSource_Memory sender_key_source(kSenderPublicKeyPem);
     std::unique_ptr<Botan::Public_Key> sender_public_key = Botan::X509::load_key(sender_key_source);
     Botan::PK_Verifier verifier(*sender_public_key, "PSS(SHA-256)");
+    
+    // Check if the ID matches the expected sender ID
+    std::cout << "[Receiver] Checking sender ID...\n";
+    if (pub_key_buffer[0] != static_cast<uint8_t>(kIdSender)) {
+        std::cerr << "[Receiver] Received key does not match expected sender ID\n";
+        return kNOT_OK;
+    }
+
+    std::cout << "[Receiver] Sender ID matches expected ID\n";
+    std::cout << "\n";
     
     // Separate the DER data and signature. Last 2 bytes (MSB) contains the signature size
     const size_t signature_size = static_cast<size_t>(pub_key_buffer[received_bytes - 2]) << 8 |
@@ -190,7 +200,7 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
                          pub_key_buffer.begin() + der_size + signature_size);
 
     // Print received public key in hex
-    std::cout << "[Receiver] Received (to be proved) public key (" << der_size << " bytes)\n";
+    std::cout << "[Receiver] Received (to be proved) ID + public key (" << der_size << " bytes)\n";
     print_vector_hex_n(der_data, 10);
     std::cout << "\n";
 
@@ -199,7 +209,7 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
     print_vector_hex_n(signature_data, 10);
     std::cout << "\n";
 
-    std::cout << "[Receiver] Verifying public key signature...\n";
+    std::cout << "[Receiver] Verifying ID + public key signature...\n";
     if (!verifier.verify_message(der_data, signature_data)) {
         std::cerr << "[Receiver] RESULT: Signature verification failed!\n";
         return kNOT_OK;
@@ -207,7 +217,10 @@ int get_public_key(mqd_t mq, std::unique_ptr<Botan::Public_Key>& public_key)
     std::cout << "[Receiver] RESULT: Signature verification succeeded\n";
     std::cout << "[Receiver] (Proves authenticity and integrity of key)\n";
     std::cout << "\n";
-    
+
+    // Remove the prepended ID byte before loading the key
+    der_data.erase(der_data.begin());
+
     // Load the public key from DER data
     Botan::DataSource_Memory ds(
         reinterpret_cast<const uint8_t*>(der_data.data()),
@@ -418,7 +431,7 @@ int main() {
           message_id = kMessageIdSymKey;
           [[fallthrough]];
       case kMessageIdSymKey:
-          std::cout << "[Receiver] Send symmetric key\n";
+          std::cout << "[Receiver] Derive and send symmetric session key\n";
           status = send_symmetric_key(mq_receiver_to_sender, public_key, symmetric_key);
           message_id = kMessageIdPeriodic;
           [[fallthrough]];
